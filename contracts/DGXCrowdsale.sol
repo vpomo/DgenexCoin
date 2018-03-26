@@ -244,8 +244,8 @@ contract Ownable {
  */
 
 contract MintableToken is StandardToken, Ownable {
-    string public constant name = "DeltaHFT Token";
-    string public constant symbol = "HFT";
+    string public constant name = "Dgenex";
+    string public constant symbol = "DGX";
     uint8 public constant decimals = 18;
 
     event Mint(address indexed to, uint256 amount);
@@ -316,13 +316,8 @@ contract Crowdsale is Ownable {
     // amount of raised money in wei
     uint256 public weiRaised;
     uint256 public tokenAllocated;
-    uint256 public hardWeiCap = 14412 * (10 ** 18);
 
-    function Crowdsale(
-    address _wallet
-    )
-    public
-    {
+    function Crowdsale(address _wallet) public {
         require(_wallet != address(0));
         wallet = _wallet;
     }
@@ -332,24 +327,22 @@ contract Crowdsale is Ownable {
 contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
     using SafeMath for uint256;
 
-    enum State {Active, Closed}
-    State public state;
-    uint256[] public rates  = [4000,    3000,    2500,    2000,    1750,    1500];
-    uint256[] public limits = [1*10**24, 7*10**24, 13*10**24, 19*10**24, 25*10**24, 30*10**24];
-    uint256 weiMinSale = 1 * 10**17; // 0.1 ETH
+    uint256 weiMaxSale = 10 ether; // 10.0 ETH
 
     mapping (address => uint256) public deposited;
 
-    uint256 public constant INITIAL_SUPPLY = 100 * (10 ** 6) * (10 ** uint256(decimals));
-    uint256 public fundForSale = 30 * (10 ** 6) * (10 ** uint256(decimals));
+    uint256 public constant INITIAL_SUPPLY = 10 * (10 ** 9) * (10 ** uint256(decimals));
+    uint256 public fundForSale = 5 * (10 ** 9) * (10 ** uint256(decimals));
+    uint256 public fundDigitalMarket = 2 * (10 ** 9) * (10 ** uint256(decimals));
+    uint256 public fundTeam = 3 * (10 ** 9) * (10 ** uint256(decimals));
+    address public addressFundDigitalMarket;
+    address public addressFundTeam;
 
     uint256 public countInvestor;
-    bool public saleToken = true;
+    uint256 public rate = 1000;
 
     event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount);
     event TokenLimitReached(uint256 tokenRaised, uint256 purchasedToken);
-    event HardCapReached();
-    event Finalized();
 
     function DGXCrowdsale(
     address _owner
@@ -362,15 +355,9 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
         owner = _owner;
         transfersEnabled = true;
         mintingFinished = false;
-        state = State.Active;
         totalSupply = INITIAL_SUPPLY;
         bool resultMintForOwner = mintForOwner(owner);
         require(resultMintForOwner);
-    }
-
-    modifier inState(State _state) {
-        require(state == _state);
-        _;
     }
 
     // fallback function can be used to buy tokens
@@ -378,18 +365,9 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
         buyTokens(msg.sender);
     }
 
-    function startSale() public onlyOwner {
-        saleToken = true;
-    }
-
-    function stopSale() public onlyOwner {
-        saleToken = false;
-    }
-
     // low level token purchase function
-    function buyTokens(address _investor) public inState(State.Active) payable returns (uint256){
+    function buyTokens(address _investor) public payable returns (uint256){
         require(_investor != address(0));
-        require(saleToken == true);
         uint256 weiAmount = msg.value;
         uint256 tokens = validPurchaseTokens(weiAmount);
         if (tokens == 0) {revert();}
@@ -407,69 +385,38 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
     }
 
     /**
-    * preICO    1 ETH = 4,000 tokens -- Limit = 0,10  ETH
-    * 1 Stage   1 ETH = 3,000 tokens -- Limit = 0,10  ETH
-    * 2 Stage   1 ETH = 2,500 tokens -- Limit = 0,10  ETH
-    * 3 Stage   1 ETH = 2,000 tokens -- Limit = 0,10  ETH
-    * 4 Stage   1 ETH = 1,750 tokens -- Limit = 0,10  ETH
-    * 5 Stage   1 ETH = 1,500 tokens -- Limit = 0,10  ETH
+    * Total supply tokens for periods
     *
-    * Bonus token of 10% given to contributors of 1 ETH or more.
-    * Bonus token of 20% given to contributors of 5 ETH or more
+    * pre  ICO   from 05 April 11.00 GMT to 19 April 11.00GMT 2018
+    * main ICO   from 19 April 11.00GMT to 31 May 11.00GMT 2018
+    *
+    * 30% bonus token given to investors during the pre-ICO.
+    * 20% bonus token given to investors during the main ICO
     */
     function getTotalAmountOfTokens(uint256 _weiAmount) internal view returns (uint256) {
-        uint256 currentPeriod = getPeriod(tokenAllocated);
         uint256 amountOfTokens = 0;
-        if(currentPeriod < 6){
-            amountOfTokens = _weiAmount.mul(rates[currentPeriod]);
-            if( 1*10**18 <= _weiAmount && _weiAmount < 5*10**18){
-                amountOfTokens = amountOfTokens.mul(110).div(100);
-            }
-            if( 5*10**18 <= _weiAmount){
-                amountOfTokens = amountOfTokens.mul(120).div(100);
-            }
-        } else {
-            amountOfTokens = 0;
+        uint256 currentTime = now;
+        currentTime = 1523358000; //Tue, 10 Apr 2018 11:00:00 GMT
+        //currentTime = 1526814000; //Sun, 20 May 2018 11:00:00 GMT
+        if (1522926000 <= currentTime && currentTime < 1524135600) {
+            amountOfTokens = _weiAmount.mul(rate).mul(130).div(100);
         }
-        if(tokenAllocated.add(amountOfTokens) > fundForSale){
-            amountOfTokens = 0;
+        if (1524135600 <= currentTime && currentTime <= 1527764400) {
+            amountOfTokens = _weiAmount.mul(rate).mul(120).div(100);
         }
         return amountOfTokens;
     }
 
-    /**
-    * Total supply tokens for periods
-    * preICO    1, 000,000 tokens
-    * 1 Stage   7, 000,000 tokens
-    * 2 Stage   13,000,000 tokens
-    * 3 Stage   19,000,000 tokens
-    * 4 Stage   25,000,000 tokens
-    * 5 Stage   30,000,000 tokens
-    *
-    */
-    function getPeriod(uint256 currentTokenAllocated) public view returns (uint) {
-        if(0 < currentTokenAllocated && currentTokenAllocated < limits[0]){
-            return 0;
-        }
-        if(currentTokenAllocated > limits[5]){
-            return 6;
-        }
-        for(uint i = 1; i < 6; i++){
-            if(limits[i-1] <= currentTokenAllocated && currentTokenAllocated < limits[i]){
-                return i;
-            }
-        }
-    }
-
     function deposit(address investor) internal {
-        require(state == State.Active);
         deposited[investor] = deposited[investor].add(msg.value);
     }
 
     function mintForOwner(address _wallet) internal returns (bool result) {
         result = false;
         require(_wallet != address(0));
-        balances[_wallet] = balances[_wallet].add(INITIAL_SUPPLY);
+        balances[_wallet] = balances[_wallet].add(fundForSale);
+        balances[addressFundTeam] = balances[addressFundTeam].add(fundTeam);
+        balances[addressFundDigitalMarket] = balances[addressFundDigitalMarket].add(fundDigitalMarket);
         result = true;
     }
 
@@ -477,29 +424,22 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
         return deposited[_investor];
     }
 
-    function validPurchaseTokens(uint256 _weiAmount) public inState(State.Active) returns (uint256) {
+    function setRate(uint256 _newRate) public returns (bool){
+        require(_newRate > 0);
+        rate = _newRate;
+        return true;
+    }
+
+    function validPurchaseTokens(uint256 _weiAmount) public returns (uint256) {
         uint256 addTokens = getTotalAmountOfTokens(_weiAmount);
-        if (_weiAmount < weiMinSale) {
+        if (_weiAmount > weiMaxSale) {
             return 0;
         }
         if (tokenAllocated.add(addTokens) > fundForSale) {
             TokenLimitReached(tokenAllocated, addTokens);
             return 0;
         }
-        if (weiRaised.add(_weiAmount) > hardWeiCap) {
-            HardCapReached();
-            return 0;
-        }
-    return addTokens;
-    }
-
-    function finalize() public onlyOwner inState(State.Active) returns (bool result) {
-        result = false;
-        state = State.Closed;
-        wallet.transfer(this.balance);
-        finishMinting();
-        Finalized();
-        result = true;
+        return addTokens;
     }
 
     function removeContract() public onlyOwner {

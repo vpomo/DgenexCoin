@@ -3,17 +3,14 @@ var DGXCrowdsale = artifacts.require("./DGXCrowdsale.sol");
 
 contract('DGXCrowdsale', (accounts) => {
     var contract;
-    var owner = "0x55Ecc562c95f19488943c7a7fD1FC3766594D920";
-    var rate = 4000;
+    var owner = "0xcbab91b18583ba3c282179d406ccebe8ce3058ed";
+    var rate = 1000*1.3;
     var buyWei = 5 * 10**17;
-    var rateNew = 4000;
+    var rateNew = 1000*1.3;
     var buyWeiNew = 5 * 10**17;
-    var buyWeiMin = 1 * 10**16;
-    var buyWeiCap = 14412 * (10 ** 18);
+    var buyWeiMax = 11 * 10**18;
 
-    var period = 0;
-
-    var totalSupply = 1e+26;
+    var totalSupply = 1e+28;
 
     it('should deployed contract', async ()  => {
         assert.equal(undefined, contract);
@@ -28,7 +25,7 @@ contract('DGXCrowdsale', (accounts) => {
     it('verification balance owner contract', async ()  => {
         var balanceOwner = await contract.balanceOf(owner);
         //console.log("balanceOwner = " + balanceOwner);
-        assert.equal(totalSupply, balanceOwner);
+        assert.equal(5e+27, balanceOwner);
     });
 
     it('verification of receiving Ether', async ()  => {
@@ -40,9 +37,6 @@ contract('DGXCrowdsale', (accounts) => {
         var numberToken = await contract.validPurchaseTokens.call(Number(buyWei));
         //console.log(" numberTokens = " + JSON.stringify(numberToken));
         //console.log("numberTokens = " + numberToken);
-
-        period = await contract.getPeriod.call(tokenAllocatedBefore);
-        //console.log("period = " + period)
 
         await contract.buyTokens(accounts[2],{from:accounts[2], value:buyWei});
         var tokenAllocatedAfter = await contract.tokenAllocated.call();
@@ -81,34 +75,10 @@ contract('DGXCrowdsale', (accounts) => {
 
     });
 
-    it('verification define period', async ()  => {
-        period = await contract.getPeriod(1*10**23);
-        //console.log("period = " + period);
-        assert.equal(0, period);
-
-        period = await contract.getPeriod(5*10**24);
-        assert.equal(1, period);
-
-        period = await contract.getPeriod(10*10**24);
-        assert.equal(2, period);
-
-        period = await contract.getPeriod(15*10**24);
-        assert.equal(3, period);
-
-        period = await contract.getPeriod(20*10**24);
-        assert.equal(4, period);
-
-        period = await contract.getPeriod(26*10**24);
-        assert.equal(5, period);
-
-        period = await contract.getPeriod(31*10**24);
-        assert.equal(6, period);
-    });
-
     it('verification valid purchase token', async ()  => {
         var newByWei = 1 * 10**17;
         var numberToken = await contract.validPurchaseTokens.call(Number(newByWei));
-        assert.equal( newByWei*4000, numberToken);
+        assert.equal( newByWei*1000*1.3, numberToken);
         //console.log("numberToken = " + numberToken);
 
         var tokenAllocatedBefore = await contract.tokenAllocated.call();
@@ -118,24 +88,13 @@ contract('DGXCrowdsale', (accounts) => {
         await contract.buyTokens(accounts[3],{from:accounts[3], value:newByWei});
         var tokenAllocated = await contract.tokenAllocated.call();
         //console.log("tokenAllocated = " + tokenAllocated);
-        assert.equal( newByWei*4000*1.2, numberToken);
+        assert.equal( newByWei*1000*1.3, numberToken);
         //assert.equal(Number(tokenAllocatedBefore) < Number(tokenAllocated));
     });
 
-    it('verification tokens limit min amount', async ()  => {
-            var numberTokensMinWey = await contract.validPurchaseTokens.call(buyWeiMin);
-            //console.log("numberTokensMinWey = " + numberTokensMinWey);
-            assert.equal(0, numberTokensMinWey);
-    });
-
-    it('verification tokens cap reached', async ()  => {
-            var numberTokensNormal = await contract.validPurchaseTokens.call(buyWei);
-            //console.log("numberTokensNormal = " + numberTokensNormal);
-            assert.equal(rate*buyWei, numberTokensNormal);
-
-            var numberTokensFault = await contract.validPurchaseTokens.call(buyWeiCap);
-            //console.log("numberTokensFault = " + numberTokensFault);
-            assert.equal(0, numberTokensFault);
+    it('verification tokens limit max amount', async ()  => {
+            var numberTokensMaxWey = await contract.validPurchaseTokens.call(buyWeiMax);
+            assert.equal(0, numberTokensMaxWey);
     });
 
 });
