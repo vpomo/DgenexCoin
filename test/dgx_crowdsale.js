@@ -3,7 +3,7 @@ var DGXCrowdsale = artifacts.require("./DGXCrowdsale.sol");
 
 contract('DGXCrowdsale', (accounts) => {
     var contract;
-    var owner = "0xcbab91b18583ba3c282179d406ccebe8ce3058ed";
+    var owner = "0x19C8FDc9499887a590DE0Bb07837f7661391A87c";
     var rate = 1000*1.3;
     var buyWei = 5 * 10**17;
     var rateNew = 1000*1.3;
@@ -78,7 +78,7 @@ contract('DGXCrowdsale', (accounts) => {
     it('verification valid purchase token', async ()  => {
         var newByWei = 1 * 10**17;
         var numberToken = await contract.validPurchaseTokens.call(Number(newByWei));
-        assert.equal( newByWei*1000*1.3, numberToken);
+        assert.equal( newByWei*rate, numberToken);
         //console.log("numberToken = " + numberToken);
 
         var tokenAllocatedBefore = await contract.tokenAllocated.call();
@@ -88,13 +88,29 @@ contract('DGXCrowdsale', (accounts) => {
         await contract.buyTokens(accounts[3],{from:accounts[3], value:newByWei});
         var tokenAllocated = await contract.tokenAllocated.call();
         //console.log("tokenAllocated = " + tokenAllocated);
-        assert.equal( newByWei*1000*1.3, numberToken);
+        assert.equal( newByWei*rate, numberToken);
         //assert.equal(Number(tokenAllocatedBefore) < Number(tokenAllocated));
     });
 
     it('verification tokens limit max amount', async ()  => {
             var numberTokensMaxWey = await contract.validPurchaseTokens.call(buyWeiMax);
             assert.equal(0, numberTokensMaxWey);
+    });
+
+    it('verification burning unsold tokens', async ()  => {
+            var tokenAllocated = await contract.tokenAllocated.call();
+            //console.log("tokenAllocated = " + tokenAllocated);
+
+            var totalSupplyBefore = await contract.totalSupply.call();
+            //console.log("totalSupplyBefore = " + totalSupplyBefore);
+
+            var numberTokensBurn = await contract.ownerBurnToken.call();
+            //console.log("numberTokensBurn = " + numberTokensBurn);
+            await contract.ownerBurnToken();
+            var totalSupplyAfter = await contract.totalSupply.call();
+            //console.log("totalSupplyAfter = " + totalSupplyAfter);
+            assert.equal(Number(totalSupplyAfter), Number(tokenAllocated*2));
+            assert.equal(numberTokensBurn, totalSupplyBefore - tokenAllocated);
     });
 
 });

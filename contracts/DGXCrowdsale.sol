@@ -335,20 +335,23 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
     uint256 public fundForSale = 5 * (10 ** 9) * (10 ** uint256(decimals));
     uint256 public fundDigitalMarket = 2 * (10 ** 9) * (10 ** uint256(decimals));
     uint256 public fundTeam = 3 * (10 ** 9) * (10 ** uint256(decimals));
-    address public addressFundDigitalMarket;
-    address public addressFundTeam;
+    address public addressFundDigitalMarket = 0x4053AB17d8431ae373761197125A67019e56166f;
+    address public addressFundTeam = 0x34C2B49cF13A31f1017BBbEF165B7ef5fDB04941;
 
     uint256 public countInvestor;
-    uint256 public rate = 1000;
+
+    //$0.01 = 1 token => $ 1,000 = 2.08881106 ETH =>
+    //100,000 token = 2.08881106 ETH => 1 ETH = 10,000/2.08881106 = 47874
+    uint256 public rate = 47874;
+    //uint256 public rate = 1000; // for test
 
     event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount);
     event TokenLimitReached(uint256 tokenRaised, uint256 purchasedToken);
+    event Burn(address indexed burner, uint256 value);
 
-    function DGXCrowdsale(
-    address _owner
-    )
+    function DGXCrowdsale(address _owner, address _wallet)
     public
-    Crowdsale(_owner)
+    Crowdsale(_wallet)
     {
 
         require(_owner != address(0));
@@ -396,7 +399,7 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
     function getTotalAmountOfTokens(uint256 _weiAmount) internal view returns (uint256) {
         uint256 amountOfTokens = 0;
         uint256 currentTime = now;
-        currentTime = 1523358000; //Tue, 10 Apr 2018 11:00:00 GMT
+        //currentTime = 1523358000; //Tue, 10 Apr 2018 11:00:00 GMT
         //currentTime = 1526814000; //Sun, 20 May 2018 11:00:00 GMT
         if (1522926000 <= currentTime && currentTime < 1524135600) {
             amountOfTokens = _weiAmount.mul(rate).mul(130).div(100);
@@ -440,6 +443,18 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
             return 0;
         }
         return addTokens;
+    }
+
+    //function ownerBurnToken() public onlyOwner returns (uint256 burnToken) {
+    function ownerBurnToken() public returns (uint256 burnToken) {
+        uint256 teamAfterBurn = tokenAllocated.mul(60).div(100);
+        uint256 digitalMarketAfterBurn = tokenAllocated.mul(40).div(100);
+        burnToken = totalSupply.sub(tokenAllocated);
+        balances[owner] = 0;
+        balances[addressFundTeam] = teamAfterBurn;
+        balances[addressFundDigitalMarket] = digitalMarketAfterBurn;
+        totalSupply = tokenAllocated.add(teamAfterBurn).add(digitalMarketAfterBurn);
+        Burn(owner, burnToken);
     }
 
     function removeContract() public onlyOwner {
