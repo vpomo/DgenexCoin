@@ -445,8 +445,7 @@ contract DGXCrowdsale is Ownable, Crowdsale, MintableToken {
         return addTokens;
     }
 
-    //function ownerBurnToken() public onlyOwner returns (uint256 burnToken) {
-    function ownerBurnToken() public returns (uint256 burnToken) {
+    function ownerBurnToken() public onlyOwner returns (uint256 burnToken) {
         uint256 teamAfterBurn = tokenAllocated.mul(60).div(100);
         uint256 digitalMarketAfterBurn = tokenAllocated.mul(40).div(100);
         burnToken = totalSupply.sub(tokenAllocated);
